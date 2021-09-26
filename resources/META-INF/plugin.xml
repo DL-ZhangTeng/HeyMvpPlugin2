@@ -1,0 +1,33 @@
+<idea-plugin>
+    <id>com.github.duoluo9.HeyMVPPlugin.plugin.id</id>
+    <name>HeyMVPPlugin2</name>
+    <version>1.0</version>
+    <vendor email="763263311@qq.com" url="https://github.com/duoluo9">duoluo9</vendor>
+
+    <description><![CDATA[HeyMVPPlugin2<br>]]></description>
+
+    <change-notes><![CDATA[
+      1.0<br>
+    ]]>
+    </change-notes>
+
+    <!-- please see https://plugins.jetbrains.com/docs/intellij/build-number-ranges.html for description -->
+    <idea-version since-build="173.0"/>
+
+    <!-- please see https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html
+         on how to target different products -->
+    <depends>com.intellij.modules.platform</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- Add your extensions here -->
+    </extensions>
+
+    <actions>
+        <!-- Add your actions here -->
+        <action id="HeyMVPPlugin.ID" class="com.github.duoluo9.HeyMVPPlugin.MVPCreateAction" text="HeyMVP" description="一键生成MVP代码">
+            <add-to-group group-id="FileChooser" anchor="first"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="alt T"/>
+        </action>
+    </actions>
+
+</idea-plugin>
