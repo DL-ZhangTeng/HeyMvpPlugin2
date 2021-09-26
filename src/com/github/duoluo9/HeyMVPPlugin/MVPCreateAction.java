@@ -13,44 +13,73 @@ import org.w3c.dom.NodeList;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 import java.io.*;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Map;
 
 public class MVPCreateAction extends AnAction {
-
     private Project project;
     private Module module;
-    //包名
     private String packageName = "";
-    private String mAuthor;//作者
-    private String mModuleName;//模块名称
-    //类型
+    private String mAuthor = "Hey";
+    private String mModuleName;
     private String type;
-    private CodeType mType;
+    private String name;
+    private MVPCreateAction.CodeType mType;
+    private String layoutName = "";
+    private boolean isKt = false;
 
-    private enum CodeType {
-        Activity, Fragment, Presenter, BaseView, BasePresenter, MvpBaseActivity, MvpBaseFragment
-    }
-
-    @Override
     public void actionPerformed(AnActionEvent e) {
         project = e.getData(PlatformDataKeys.PROJECT);
         module = (Module) e.getDataContext().getData("module");
         packageName = getPackageName();
         Map<String, String> map = System.getenv();
         mAuthor = map.get("USERNAME");// 获取用户名
-        init();
-        refreshProject(e);
+        this.showDialog();
+        this.refreshProject();
     }
 
-    /**
-     * 刷新项目
-     *
-     * @param e
-     */
-    private void refreshProject(AnActionEvent e) {
+    private void showDialog() {
+        CreateDialog myDialog = new CreateDialog((name) -> {
+            if (!name.contains("Fragment") && !name.contains("fragment")) {
+                this.mModuleName = name.split("Activity")[0];
+                this.mType = MVPCreateAction.CodeType.Activity;
+                this.name = "Activity";
+            } else {
+                this.mModuleName = name.split("Fragment")[0];
+                this.mType = MVPCreateAction.CodeType.Fragment;
+                this.name = "Fragment";
+            }
+
+            this.mModuleName.replace("Fragment", "");
+            this.mModuleName.replace("fragment", "");
+            this.mModuleName.replace("Activity", "");
+            this.mModuleName.replace("activity", "");
+
+            StringBuilder stringBuilder = new StringBuilder();
+            stringBuilder.append(module.getName().substring(module.getName().indexOf(".") + 1).toLowerCase());
+            stringBuilder.append("_");
+            stringBuilder.append(this.name.toLowerCase());
+            ArrayList<String> activityChildNames = splitByUpperCase(mModuleName);
+            for (String activityChildName : activityChildNames) {
+                stringBuilder.append("_").append(activityChildName.toLowerCase());
+            }
+
+            this.layoutName = stringBuilder.toString();
+            this.createClassFiles();
+            Messages.showInfoMessage(this.project, "create mvp code success", "title");
+        });
+        myDialog.setVisible(true);
+    }
+
+    private void refreshProject() {
         try {
             project.getBaseDir().refresh(false, true);
         } catch (Exception exception) {
@@ -58,113 +87,62 @@ public class MVPCreateAction extends AnAction {
         }
     }
 
-    /**
-     * 初始化Dialog
-     */
-    private void init() {
-        CreateDialog myDialog = new CreateDialog(name -> {
-            if (name.contains("Fragment")) {
-                mModuleName = name.split("Fragment")[0];
-                mType = CodeType.Fragment;
-                type = "Fragment";
-            } else {
-                mModuleName = name.split("Activity")[0];
-                mType = CodeType.Activity;
-                type = "Activity";
-            }
-            createClassFiles();
-            Messages.showInfoMessage(project, "create mvp code success", "title");
-        });
-        myDialog.setVisible(true);
-
-    }
-
-    /**
-     * 生成类文件
-     */
     private void createClassFiles() {
-        createClassFile(mType);
-        createClassFile(CodeType.Presenter);
-//        createBaseClassFile(CodeType.BaseView);
-//        createBaseClassFile(CodeType.BasePresenter);
-//        createBaseClassFile(CodeType.MvpBaseActivity);
-//        createBaseClassFile(CodeType.MvpBaseFragment);
+        this.createClassFile(this.mType);
+        this.createClassFile(MVPCreateAction.CodeType.Presenter);
+        this.createClassFile(MVPCreateAction.CodeType.Layout);
     }
 
-    /**
-     * 生成base类
-     *
-     * @param codeType
-     */
-    private void createBaseClassFile(CodeType codeType) {
-        String fileName = "";
-        String content = "";
-        String basePath = getAppPath() + "base/";
-        switch (codeType) {
-            case BaseView:
-                if (!new File(basePath + "BaseView.java").exists()) {
-                    fileName = "TemplateBaseView.txt";
-                    content = ReadTemplateFile(fileName);
-                    content = dealTemplateContent(content);
-                    writeToFile(content, basePath, "BaseView.java");
-                }
-                break;
-            case BasePresenter:
-                if (!new File(basePath + "BasePresenter.java").exists()) {
-                    fileName = "TemplateBasePresenter.txt";
-                    content = ReadTemplateFile(fileName);
-                    content = dealTemplateContent(content);
-                    writeToFile(content, basePath, "BasePresenter.java");
-                }
-                break;
-            case MvpBaseActivity:
-                if (!new File(basePath + "MvpBaseActivity.java").exists()) {
-                    fileName = "TemplateMvpBaseActivity.txt";
-                    content = ReadTemplateFile(fileName);
-                    content = dealTemplateContent(content);
-                    writeToFile(content, basePath, "MvpBaseActivity.java");
-                }
-                break;
-            case MvpBaseFragment:
-                if (!new File(basePath + "MvpBaseFragment.java").exists()) {
-                    fileName = "TemplateMvpBaseFragment.txt";
-                    content = ReadTemplateFile(fileName);
-                    content = dealTemplateContent(content);
-                    writeToFile(content, basePath, "MvpBaseFragment.java");
-                }
-                break;
-        }
-    }
-
-    /**
-     * 生成mvp框架代码
-     *
-     * @param codeType
-     */
-    private void createClassFile(CodeType codeType) {
-        String fileName = "";
-        String content = "";
+    private void createClassFile(MVPCreateAction.CodeType codeType) {
+        String fileName;
+        String content;
         String appPath = getAppPath();
         switch (codeType) {
             case Activity:
-                fileName = "TemplateActivity.txt";
-                content = ReadTemplateFile(fileName);
-                content = dealTemplateContent(content);
-                writeToFile(content, appPath + mModuleName.toLowerCase(), mModuleName + "Activity.java");
+                this.type = "Activity";
+                this.name = "Activity";
+                fileName = isKt ? "TemplateActivity.kt.ftl" : "TemplateActivity.java.ftl";
+                content = this.ReadTemplateFile(fileName);
+                content = this.dealTemplateContent(content);
+                if (this.isKt) {
+                    this.writeToFile(content, appPath, this.mModuleName + "Activity.kt");
+                } else {
+                    this.writeToFile(content, appPath, this.mModuleName + "Activity.java");
+                }
+
+                this.editManifest(this.mModuleName + "Activity");
                 break;
             case Fragment:
-                fileName = "TemplateFragment.txt";
-                content = ReadTemplateFile(fileName);
-                content = dealTemplateContent(content);
-                writeToFile(content, appPath + mModuleName.toLowerCase(), mModuleName + "Fragment.java");
+                this.type = "Fragment";
+                this.name = "Fragment";
+                fileName = isKt ? "TemplateFragment.kt.ftl" : "TemplateFragment.java.ftl";
+                content = this.ReadTemplateFile(fileName);
+                content = this.dealTemplateContent(content);
+                if (this.isKt) {
+                    this.writeToFile(content, appPath, this.mModuleName + "Fragment.kt");
+                } else {
+                    this.writeToFile(content, appPath, this.mModuleName + "Fragment.java");
+                }
                 break;
             case Presenter:
-                fileName = "TemplatePresenter.txt";
-                content = ReadTemplateFile(fileName);
-                content = dealTemplateContent(content);
-                writeToFile(content, appPath + mModuleName.toLowerCase(), mModuleName + "Presenter.java");
+                this.type = "Presenter";
+                fileName = isKt ? "TemplatePresenter.kt.ftl" : "TemplatePresenter.java.ftl";
+                content = this.ReadTemplateFile(fileName);
+                content = this.dealTemplateContent(content);
+                if (this.isKt) {
+                    this.writeToFile(content, appPath, this.mModuleName + "Presenter.kt");
+                } else {
+                    this.writeToFile(content, appPath, this.mModuleName + "Presenter.java");
+                }
                 break;
+            case Layout:
+                this.type = "Layout";
+                fileName = isKt ? "TemplateLayout.kt.ftl" : "TemplateLayout.java.ftl";
+                content = this.ReadTemplateFile(fileName);
+                content = this.dealTemplateContent(content);
+                this.writeToFile(content, getLayoutPath(), this.layoutName + ".xml");
         }
+
     }
 
     /**
@@ -174,65 +152,72 @@ public class MVPCreateAction extends AnAction {
      */
     private String getAppPath() {
         String packagePath = packageName.replace(".", "/");
-        String appPath = project.getBasePath() + "/" + module.getName().substring(module.getName().indexOf(".") + 1) + "/src/main/java/" + packagePath + "/";
-        return appPath;
+        return project.getBasePath() + "/" + module.getName().substring(module.getName().indexOf(".") + 1) + "/src/main/java/" + packagePath + "/";
     }
 
     /**
-     * 替换模板中字符
+     * 获取包名文件路径
      *
-     * @param content
      * @return
      */
+    private String getLayoutPath() {
+        return project.getBasePath() + "/" + module.getName().substring(module.getName().indexOf(".") + 1) + "/src/main/res/layout/";
+    }
+
     private String dealTemplateContent(String content) {
-        content = content.replace("$name", mModuleName);
+        content = content.replace("$name", this.mModuleName);
         if (content.contains("$packagename")) {
-            content = content.replace("$packagename", packageName + "." + mModuleName.toLowerCase());
+            content = content.replace("$packagename", this.packageName);
         }
+
         if (content.contains("$basepackagename")) {
-            content = content.replace("$basepackagename", "hey.com" + ".base");
+            if (this.isKt) {
+                content = content.replace("$basepackagename", "com.sskj.base." + this.type.toLowerCase());
+            } else {
+                content = content.replace("$basepackagename", "com.sskj.base");
+            }
         }
-        content = content.replace("$Type", type);
-        content = content.replace("$author", mAuthor);
-        content = content.replace("$date", getDate());
-        return content;
+
+        if (content.contains("$package")) {
+            content = content.replace("$package", this.packageName);
+        }
+
+        content = content.replace("$date", this.getDate());
+        content = content.replace("$end", this.name);
+        content = content.replace("$layout", this.layoutName);
+        content = content.replace("$author", this.mAuthor);
+        return content.replace(" $rPackageName", this.packageName);
     }
 
-    /**
-     * 获取当前时间
-     *
-     * @return
-     */
     public String getDate() {
         Date currentTime = new Date();
-        SimpleDateFormat formatter = new SimpleDateFormat("yyyy/MM/dd");
-        String dateString = formatter.format(currentTime);
-        return dateString;
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+        return formatter.format(currentTime);
     }
 
-
-    /**
-     * 读取模板文件中的字符内容
-     *
-     * @param fileName 模板文件名
-     * @return
-     */
     private String ReadTemplateFile(String fileName) {
         InputStream in = null;
-        in = this.getClass().getResourceAsStream("/com/github/duoluo9/HeyMVPPlugin/Template/" + fileName);
-        String content = "";
-        try {
-            content = new String(readStream(in));
-        } catch (IOException e) {
-            e.printStackTrace();
+        if (this.isKt) {
+            in = this.getClass().getResourceAsStream("/com/github/duoluo9/HeyMVPPlugin/TemplateKt/" + fileName);
+        } else {
+            in = this.getClass().getResourceAsStream("/com/github/duoluo9/HeyMVPPlugin/Template/" + fileName);
         }
+
+        String content = "";
+
+        try {
+            content = new String(this.readStream(in));
+        } catch (IOException var5) {
+            var5.printStackTrace();
+        }
+
         return content;
     }
 
-
     private byte[] readStream(InputStream inputStream) throws IOException {
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         byte[] buffer = new byte[1024];
+        if (inputStream == null) return buffer;
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         int len = -1;
         try {
             while ((len = inputStream.read(buffer)) != -1) {
@@ -247,7 +232,6 @@ public class MVPCreateAction extends AnAction {
 
         return outputStream.toByteArray();
     }
-
 
     /**
      * 生成
@@ -302,4 +286,71 @@ public class MVPCreateAction extends AnAction {
         }
         return package_name;
     }
+
+    private void editManifest(String name) {
+        DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+
+        try {
+            DocumentBuilder db = dbf.newDocumentBuilder();
+            Document doc = db.parse(project.getBasePath() + "/" + module.getName().substring(module.getName().indexOf(".") + 1) + "/src/main/AndroidManifest.xml");
+            NodeList nodeList1 = doc.getElementsByTagName("application");
+
+            for (int j = 0; j < nodeList1.getLength(); ++j) {
+                Node node = nodeList1.item(j);
+                Element application = (Element) node;
+                Element a = doc.createElement("activity");
+                a.setAttribute("android:name", this.packageName + ".mvp.ui.activity." + name);
+                application.appendChild(a);
+            }
+
+            saveXml(project.getBasePath() + "/" + module.getName().substring(module.getName().indexOf(".") + 1) + "/src/main/AndroidManifest.xml", doc);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    public static void saveXml(String fileName, Document doc) {
+        TransformerFactory transFactory = TransformerFactory.newInstance();
+        try {
+            Transformer transformer = transFactory.newTransformer();
+            transformer.setOutputProperty("indent", "yes");
+            DOMSource source = new DOMSource();
+            source.setNode(doc);
+            StreamResult result = new StreamResult();
+            result.setOutputStream(new FileOutputStream(fileName));
+            transformer.transform(source, result);
+        } catch (TransformerException | FileNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 根据大写字母拆分数组
+     */
+    private ArrayList<String> splitByUpperCase(String str) {
+        ArrayList<String> rs = new ArrayList<String>();
+        int index = 0;
+        int len = str.length();
+        for (int i = 1; i < len; i++) {
+            if (Character.isUpperCase(str.charAt(i))) {
+                rs.add(str.substring(index, i));
+                index = i;
+            }
+        }
+        rs.add(str.substring(index, len));
+        return rs;
+    }
+
+    private static enum CodeType {
+        Activity,
+        Fragment,
+        Presenter,
+        BaseView,
+        BasePresenter,
+        MvpBaseActivity,
+        MvpBaseFragment,
+        Layout;
+    }
 }
+
