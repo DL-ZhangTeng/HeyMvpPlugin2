@@ -30,6 +30,7 @@ public class MVPCreateAction extends AnAction {
     private Project project;
     private Module module;
     private String packageName = "";
+    private String packageNameFull = "";
     private String mAuthor = "Hey";
     private String mModuleName;
     private String type;
@@ -51,7 +52,8 @@ public class MVPCreateAction extends AnAction {
         } else {
             appPath = getAppPath();//项目根路径+包名
         }
-
+        String[] strings = appPath.split("src/main/java/");
+        packageNameFull = strings.length > 1 ? strings[1].replace("/", ".") : packageName;
         this.showDialog();
         this.refreshProject();
     }
@@ -176,7 +178,7 @@ public class MVPCreateAction extends AnAction {
     private String dealTemplateContent(String content) {
         content = content.replace("$name", this.mModuleName);
         if (content.contains("$packagename")) {
-            content = content.replace("$packagename", this.packageName);
+            content = content.replace("$packagename", packageNameFull);
         }
 
         if (content.contains("$basepackagename")) {
@@ -188,7 +190,7 @@ public class MVPCreateAction extends AnAction {
         }
 
         if (content.contains("$package")) {
-            content = content.replace("$package", this.packageName);
+            content = content.replace("$package", this.packageNameFull);
         }
 
         content = content.replace("$date", this.getDate());
@@ -308,7 +310,7 @@ public class MVPCreateAction extends AnAction {
                 Node node = nodeList1.item(j);
                 Element application = (Element) node;
                 Element a = doc.createElement("activity");
-                a.setAttribute("android:name", this.packageName + ".mvp.ui.activity." + name);
+                a.setAttribute("android:name", packageNameFull + "." + name);
                 application.appendChild(a);
             }
 
