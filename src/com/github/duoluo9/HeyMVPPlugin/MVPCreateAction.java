@@ -2,10 +2,12 @@ package com.github.duoluo9.HeyMVPPlugin;
 
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
+import com.intellij.openapi.actionSystem.CommonDataKeys;
 import com.intellij.openapi.actionSystem.PlatformDataKeys;
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.Messages;
+import com.intellij.openapi.vfs.VirtualFile;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -32,6 +34,7 @@ public class MVPCreateAction extends AnAction {
     private String mModuleName;
     private String type;
     private String name;
+    private String appPath;
     private MVPCreateAction.CodeType mType;
     private String layoutName = "";
     private boolean isKt = false;
@@ -42,6 +45,13 @@ public class MVPCreateAction extends AnAction {
         packageName = getPackageName();
         Map<String, String> map = System.getenv();
         mAuthor = map.get("USERNAME");// 获取用户名
+        VirtualFile virtualFile = CommonDataKeys.VIRTUAL_FILE.getData(e.getDataContext());
+        if (virtualFile != null) {
+            appPath = virtualFile.getPath();//项目根路径+包名+被选择的文件夹路径
+        } else {
+            appPath = getAppPath();//项目根路径+包名
+        }
+
         this.showDialog();
         this.refreshProject();
     }
@@ -96,7 +106,6 @@ public class MVPCreateAction extends AnAction {
     private void createClassFile(MVPCreateAction.CodeType codeType) {
         String fileName;
         String content;
-        String appPath = getAppPath();
         switch (codeType) {
             case Activity:
                 this.type = "Activity";
