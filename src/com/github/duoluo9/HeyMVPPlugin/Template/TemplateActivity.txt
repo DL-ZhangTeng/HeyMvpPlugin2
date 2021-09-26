@@ -1,26 +1,32 @@
-package $packagename
+package $packagename;
 
-import $basepackagename.BaseMvpActivity
+import $basepackagename.BaseMvpActivity;
 
 
 /**
  * @author $author
  * Create at @date $date
  */
-class $nameActivity : BaseMvpActivity<$namePresenter>() {
-    override fun layoutId(): Int {
-        return 0
+class $nameActivity extends BaseMvpActivity<$namePresenter> {
+
+    @Override
+    public int getLayoutId() {
+        return 0;
     }
 
-    override fun getPresenter(): $namePresenter {
-        return $namePresenter()
+    @Override
+    public $namePresenter getPresenter() {
+        return new $namePresenter();
     }
 
-    override fun initView() {
+    @Override
+    public void initView() {
 
     }
 
-    override fun initData() {
+    @Override
+    public void initData() {
+
     }
 
 }

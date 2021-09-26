@@ -25,7 +25,7 @@
     <actions>
         <!-- Add your actions here -->
         <action id="HeyMVPPlugin.ID" class="com.github.duoluo9.HeyMVPPlugin.MVPCreateAction" text="HeyMVP" description="一键生成MVP代码">
-            <add-to-group group-id="FileChooser" anchor="first"/>
+            <add-to-group group-id="NewGroup" anchor="first"/>
             <keyboard-shortcut keymap="$default" first-keystroke="alt T"/>
         </action>
     </actions>
