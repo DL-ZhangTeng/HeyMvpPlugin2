@@ -174,7 +174,7 @@ public class MVPCreateAction extends AnAction {
      */
     private String getAppPath() {
         String packagePath = packageName.replace(".", "/");
-        String appPath = project.getBasePath() + "/App/src/main/java/" + packagePath + "/";
+        String appPath = project.getBasePath() + "/" + module.getName().substring(module.getName().indexOf(".") + 1) + "/src/main/java/" + packagePath + "/";
         return appPath;
     }
 
